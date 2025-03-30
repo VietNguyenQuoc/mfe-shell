@@ -1,35 +1,61 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useEffect, useRef } from "react";
 
-function App() {
-  const [count, setCount] = useState(0)
+// Updated URLs of deployed miniapps
+const MINIAPP1_URL = "https://mfa-products-production.up.railway.app";
+const MINIAPP2_URL = "https://mfe-cart-production.up.railway.app";
 
-  return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+type MiniappConfig = {
+  url: string;
+  tag: string;
+};
+
+const miniappConfigs: MiniappConfig[] = [
+  { url: MINIAPP1_URL, tag: "mfe-product" },
+  { url: MINIAPP2_URL, tag: "mfe-cart" },
+];
+
+function loadScript(url: string) {
+  return new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = url;
+    script.async = true;
+    script.type = "module";
+    script.onload = resolve;
+    script.onerror = reject;
+    document.body.appendChild(script);
+  });
 }
 
-export default App
+const loadMiniapp = async (config: MiniappConfig) => {
+  const assetManifestUrl = `${config.url}/.vite/manifest.json`;
+  const assetManifest: any = await (await fetch(assetManifestUrl)).json();
+
+  const entryUrl = `${config.url}/${assetManifest["index.html"].file}`;
+
+  loadScript(entryUrl);
+};
+
+function App() {
+  const loaded = useRef(false);
+
+  useEffect(() => {
+    if (loaded.current) return;
+
+    miniappConfigs.forEach(loadMiniapp);
+    loaded.current = true;
+  }, []);
+
+  return (
+    <div>
+      <h1>Microfrontend</h1>
+
+      <div className="miniapps">
+        {miniappConfigs.map((config) => (
+          <config.tag />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export default App;
